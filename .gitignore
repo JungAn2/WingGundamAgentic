@@ -23,3 +23,7 @@ logs
 # Other
 *~
 .DS_Store
+
+#databases
+*.db
+backend/rag_storage
