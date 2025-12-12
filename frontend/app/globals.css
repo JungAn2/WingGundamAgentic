@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Zero System v2.0 Enhancements */
+
+@keyframes radar-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-radar-spin {
+  animation: radar-spin 4s linear infinite;
+}
+
+.animate-pulse-fast {
+  animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.clip-path-panel {
+  clip-path: polygon(10px 0, 100% 0,
+      100% calc(100% - 10px), calc(100% - 10px) 100%,
+      0 100%, 0 10px);
+}
+
+.text-shadow-glow {
+  text-shadow: 0 0 10px rgba(34, 197, 94, 0.8), 0 0 20px rgba(34, 197, 94, 0.4);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 20, 0, 0.5);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(34, 197, 94, 0.5);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 197, 94, 0.8);
+}
+
+.bg-cockpit-vignette {
+  background: radial-gradient(circle at center, transparent 30%, rgba(0, 0, 0, 0.8) 90%);
+}
+
+.perspective-left {
+  transform: perspective(1000px) rotateY(2deg);
+  transform-origin: right center;
+}
+
+.perspective-right {
+  transform: perspective(1000px) rotateY(-2deg);
+  transform-origin: left center;
+}
+
+:root {
+  --foreground-rgb: 0, 255, 0;
+  /* Neon Green */
+  --background-rgb: 0, 0, 0;
+  --secondary-color: #008f11;
+  --alert-color: #ff0000;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: black;
+  font-family: 'Courier New', Courier, monospace;
+  overflow-x: hidden;
+}
+
+/* CRT Scanline Effect */
+.scanline {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0),
+      rgba(255, 255, 255, 0) 50%,
+      rgba(0, 0, 0, 0.2) 50%,
+      rgba(0, 0, 0, 0.2));
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.crt-flicker {
+  animation: flicker 0.15s infinite;
+}
+
+@keyframes flicker {
+  0% {
+    opacity: 0.97;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.98;
+  }
+}
+
+/* Gundam UI Components */
+.gundam-border {
+  border: 2px solid var(--secondary-color);
+  box-shadow: 0 0 10px var(--secondary-color);
+  background: rgba(0, 20, 0, 0.8);
+}
+
+.gundam-text {
+  text-shadow: 0 0 5px var(--secondary-color);
+}
+
+.gundam-button {
+  border: 1px solid var(--secondary-color);
+  color: var(--secondary-color);
+  padding: 8px 16px;
+  background: transparent;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  transition: all 0.2s;
+}
+
+.gundam-button:hover {
+  background: var(--secondary-color);
+  color: black;
+  box-shadow: 0 0 15px var(--secondary-color);
+}

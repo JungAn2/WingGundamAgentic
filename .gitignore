@@ -1,0 +1,25 @@
+# Python
+__pycache__
+.venv
+venv
+
+# Environment
+.env
+
+# IDE
+.idea
+.vscode
+
+# Build
+build
+
+# Logs
+logs
+
+# Temp
+*.tmp
+*.temp
+
+# Other
+*~
+.DS_Store

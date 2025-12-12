@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+sqlalchemy
+apscheduler
+openai
+python-dotenv
+chromadb
+pydantic
+pydantic-settings
