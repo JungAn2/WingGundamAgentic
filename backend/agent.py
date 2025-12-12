@@ -16,8 +16,14 @@ class WingAgent:
 
     def chat(self, user_input):
         # Retrieve context from RAG
-        if context_results['documents']:
-             context = "\n".join(context_results['documents'][0])
+        context = ""
+        try:
+
+             context_results = rag_system.query(user_input, n_results=3)
+             if context_results and context_results.get('documents') and context_results['documents'][0]:
+                 context = "\n".join(context_results['documents'][0])
+        except Exception as e:
+             print(f"RAG Retrieval warning: {e}")
 
         system_prompt = f"""You are the Wing Gundam Zero System (Agentic Mode). 
         You are a highly advanced operating system monitor and assistant.
@@ -66,14 +72,10 @@ class WingAgent:
         {context}
         """
 
-        # Short-Term Memory Append
-        self.history.append({"role": "user", "content": user_input})
-        
-        # Keep last 10 turns (20 messages)
-        if len(self.history) > 20:
-            self.history = self.history[-20:]
-
-        messages = [{"role": "system", "content": system_prompt}] + self.history
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_input}
+        ]
 
         response = self.client.chat.completions.create(
             model=self.model,
@@ -82,8 +84,8 @@ class WingAgent:
         )
         content = response.choices[0].message.content
         
-        # Short-Term Memory Append (Assistant)
-        self.history.append({"role": "assistant", "content": content})
+        # Short-Term Memory Append (Assistant) - DISABLED to save tokens
+        # self.history.append({"role": "assistant", "content": content})
 
         # Basic security check on raw content if needed, though structure is now JSON
         if "UNSAFE" in content.upper() or "SECURITY ALERT" in content.upper():
