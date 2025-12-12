@@ -52,8 +52,8 @@
 
 ### 1. Clone & Install
 ```bash
-git clone https://github.com/your-repo/wing-gundam-agentic.git
-cd wing-gundam-agentic
+git clone https://github.com/JungAn2/WingGundamAgentic.git
+cd WingGundamAgentic
 ```
 
 ### 2. Backend Setup
