@@ -131,7 +131,16 @@ export default function HostManager() {
              <div className="flex justify-between items-center mb-4 border-b border-green-500 pb-2">
                 <h2 className="text-xl font-bold">NETWORK HOSTS</h2>
                 <div className="flex gap-2">
-                    <label className="bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500 px-3 py-1 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center">
+                    <label className="bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500 px-3 py-1 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center"
+                                                style={{color:'lime', border:'solid 1px lime', backgroundColor:'transparent', borderRadius:'4px', transition:'all 0.3s ease'}}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = 'lime';
+                                e.currentTarget.style.color = 'black';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                                e.currentTarget.style.color = 'lime';
+                            }}>
                         Upload
                         <input type="file" className="hidden" onChange={handleFileUpload} />
                     </label>
@@ -141,7 +150,15 @@ export default function HostManager() {
                             setFormData({ hostname: '', ip_address: '', status: 'UNKNOWN' });
                             setIsModalOpen(true);
                         }}
-                        className="bg-green-500/20 hover:bg-green-500/40 text-green-400 border border-green-500 px-3 py-1 text-xs font-bold uppercase tracking-wider transition-colors"
+                        style={{color:'lime', border:'solid 1px lime', backgroundColor:'transparent', borderRadius:'4px', transition:'all 0.3s ease'}}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = 'lime';
+                                e.currentTarget.style.color = 'black';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                                e.currentTarget.style.color = 'lime';
+                            }}
                     >
                         + Add Host
                     </button>
@@ -183,7 +200,8 @@ export default function HostManager() {
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+                style={{color:'lime', border:'solid 1px lime', backgroundColor:'black'}}>
                     <div className="w-full max-w-lg border-2 border-green-500 bg-black p-6 shadow-[0_0_40px_rgba(34,197,94,0.3)]">
                         <div className="text-xl font-bold text-green-400 mb-4 border-b border-green-500/50 pb-2">
                             {editingHost ? `EDIT HOST: ${editingHost.hostname}` : 'NEW HOST CONNECTION'}
@@ -230,13 +248,40 @@ export default function HostManager() {
 
                         <div className="flex justify-between">
                             {editingHost && (
-                                <button onClick={handleDelete} className="text-red-500 border border-red-500 px-4 py-2 hover:bg-red-900/20 text-xs font-bold">
+                                <button onClick={handleDelete} className="text-red-500 border border-red-500 px-4 py-2 hover:bg-red-900/20 text-xs font-bold"
+                                                            style={{color:'lime', border:'solid 1px lime', backgroundColor:'transparent', borderRadius:'4px', transition:'all 0.3s ease'}}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = 'lime';
+                                e.currentTarget.style.color = 'black';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                                e.currentTarget.style.color = 'lime';
+                            }}>
                                     DELETE
                                 </button>
                             )}
                             <div className="flex gap-2 ml-auto">
-                                <button onClick={() => setIsModalOpen(false)} className="text-green-600 px-4 py-2 text-xs font-bold hover:text-green-400">Cancel</button>
-                                <button onClick={handleSave} className="bg-green-600 text-black px-6 py-2 text-xs font-bold hover:bg-green-500">
+                                <button onClick={() => setIsModalOpen(false)} className="text-green-600 px-4 py-2 text-xs font-bold hover:text-green-400"
+                                                                style={{color:'lime', border:'solid 1px lime', backgroundColor:'transparent', borderRadius:'4px', transition:'all 0.3s ease'}}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = 'lime';
+                                e.currentTarget.style.color = 'black';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                                e.currentTarget.style.color = 'lime';
+                            }}>Cancel</button>
+                                <button onClick={handleSave} className="bg-green-600 text-black px-6 py-2 text-xs font-bold hover:bg-green-500"
+                                                            style={{color:'lime', border:'solid 1px lime', backgroundColor:'transparent', borderRadius:'4px', transition:'all 0.3s ease'}}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = 'lime';
+                                e.currentTarget.style.color = 'black';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                                e.currentTarget.style.color = 'lime';
+                            }}>
                                     SAVE
                                 </button>
                             </div>

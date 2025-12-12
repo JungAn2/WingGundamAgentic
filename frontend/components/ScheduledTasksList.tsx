@@ -148,6 +148,15 @@ export default function ScheduledTasksList() {
                 <button
                     onClick={() => handleOpenModal()}
                     className="bg-green-500/20 hover:bg-green-500/40 text-green-400 border border-green-500 px-3 py-1 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                    style={{ color: 'lime', border: 'solid 1px lime', backgroundColor: 'transparent', borderRadius: '4px', transition: 'all 0.3s ease' }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'lime';
+                        e.currentTarget.style.color = 'black';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = 'lime';
+                    }}
                 >
                     + Add Task
                 </button>
@@ -196,13 +205,22 @@ export default function ScheduledTasksList() {
             {/* Modal Overlay - Rendered via Portal to escape stacking contexts */}
             {/* Modal Overlay - Rendered via Portal to escape stacking contexts */}
             {mounted && isModalOpen && document.body && createPortal(
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" style={{ width: '80%', height: '50%', position: 'fixed', top: '25%', left: '10%', zIndex: 50, backgroundColor: 'black' }}>
-                    <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col border-2 border-green-500 bg-black p-6 shadow-[0_0_40px_rgba(34,197,94,0.3)] font-mono overflow-y-auto custom-scrollbar">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" style={{ width: '85%', height: '60%', position: 'fixed', top: '25%', left: '10%', zIndex: 50, backgroundColor: 'black' }}>
+                    <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col border-2 border-green-500 bg-black p-6 shadow-[0_0_40px_rgba(34,197,94,0.3)] font-mono overflow-hidden custom-scrollbar">
                         <div className="flex justify-between items-center mb-6 border-b border-green-500/50 pb-2">
                             <h2 className="text-xl font-bold text-green-400 uppercase tracking-widest">
                                 {editingTask ? `>> EDIT_SEQUENCE: ID_${editingTask.id}` : '>> NEW_SEQUENCE_INIT'}
                             </h2>
-                            <button onClick={() => setIsModalOpen(false)} className="text-green-700 hover:text-green-400 font-bold uppercase tracking-widest text-sm">[ CANCEL ]</button>
+                            <button onClick={() => setIsModalOpen(false)} className="text-green-700 hover:text-green-400 font-bold uppercase tracking-widest text-sm"
+                                style={{ color: 'lime', border: 'solid 1px lime', backgroundColor: 'transparent', borderRadius: '4px', transition: 'all 0.3s ease' }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'lime';
+                                    e.currentTarget.style.color = 'black';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                    e.currentTarget.style.color = 'lime';
+                                }}>CANCEL</button>
                         </div>
 
                         <div className="grid grid-cols-12 gap-6">
@@ -311,8 +329,17 @@ export default function ScheduledTasksList() {
                                         {validationResult.analysis}
                                     </div>
                                     {!validationResult.isValid && validationResult.corrections && (
-                                        <div className="w-full bg-yellow-500/20 text-yellow-500 border border-yellow-500 py-2 font-bold uppercase tracking-widest text-center text-xs">
-                                            [ Auto-Corrections Applied ]
+                                        <div className="w-full bg-yellow-500/20 text-yellow-500 border border-yellow-500 py-2 font-bold uppercase tracking-widest text-center text-xs"
+                                            style={{ color: 'lime', border: 'solid 1px lime', backgroundColor: 'transparent', borderRadius: '4px', transition: 'all 0.3s ease' }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.backgroundColor = 'lime';
+                                                e.currentTarget.style.color = 'black';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                                e.currentTarget.style.color = 'lime';
+                                            }}>
+                                            Auto-Corrections Applied
                                         </div>
                                     )}
                                 </div>
@@ -335,15 +362,33 @@ export default function ScheduledTasksList() {
                                 onClick={handleValidate}
                                 disabled={loading}
                                 className="px-8 py-3 border border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-black font-bold uppercase tracking-widest transition-all cursor-pointer"
+                                style={{ color: 'lime', border: 'solid 1px lime', backgroundColor: 'transparent', borderRadius: '4px', transition: 'all 0.3s ease' }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'lime';
+                                    e.currentTarget.style.color = 'black';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                    e.currentTarget.style.color = 'lime';
+                                }}
                             >
-                                {loading ? 'ANALYZING...' : '[ RUN SIMULATION / VALIDATE ]'}
+                                {loading ? 'ANALYZING...' : 'RUN SIMULATION / VALIDATE'}
                             </button>
                             <button
                                 onClick={handleSave}
                                 disabled={loading}
                                 className="px-10 py-3 bg-green-600 text-black font-bold uppercase tracking-widest hover:bg-green-400 transition-colors shadow-[0_0_20px_rgba(34,197,94,0.6)] cursor-pointer"
+                                style={{ color: 'lime', border: 'solid 1px lime', backgroundColor: 'transparent', borderRadius: '4px', transition: 'all 0.3s ease' }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'lime';
+                                    e.currentTarget.style.color = 'black';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                    e.currentTarget.style.color = 'lime';
+                                }}
                             >
-                                {loading ? 'COMMITTING...' : '[ ENGAGE / SAVE ]'}
+                                {loading ? 'COMMITTING...' : 'ENGAGE / SAVE'}
                             </button>
                         </div>
                     </div>

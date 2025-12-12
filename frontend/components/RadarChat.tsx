@@ -318,6 +318,15 @@ export default function RadarChat() {
                         <button
                             onClick={handleStop}
                             className="bg-red-600 hover:bg-red-500 text-white px-3 py-1 text-xs font-bold animate-pulse border border-red-400"
+                            style={{color:'lime', border:'solid 1px lime', backgroundColor:'transparent', borderRadius:'4px', transition:'all 0.3s ease'}}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = 'lime';
+                                e.currentTarget.style.color = 'black';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                                e.currentTarget.style.color = 'lime';
+                            }}
                         >
                             ■ STOP
                         </button>
