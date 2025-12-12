@@ -2,6 +2,7 @@ import RadarChat from '../components/RadarChat';
 import TaskMonitor from '../components/TaskMonitor';
 import ScheduledTasksList from '../components/ScheduledTasksList';
 import IssueTracker from '../components/IssueTracker';
+import HostManager from '../components/HostManager';
 
 export default function Home() {
   return (
@@ -37,8 +38,13 @@ export default function Home() {
         </div>
 
         {/* Right Panel: Issue Tracker */}
-        <div className="col-span-3 h-full pl-2 overflow-hidden">
-          <IssueTracker />
+        <div className="col-span-3 h-full pl-2 overflow-hidden flex flex-col gap-2">
+          <div className="flex-1 overflow-hidden">
+             <IssueTracker />
+          </div>
+          <div className="flex-1 overflow-hidden">
+             <HostManager />
+          </div>
         </div>
 
         {/* Background Gradients/Effects */}

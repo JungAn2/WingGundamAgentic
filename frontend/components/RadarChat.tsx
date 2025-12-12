@@ -1,6 +1,6 @@
 "use client"
 import { useState, useRef, useEffect } from 'react';
-
+import config from '../config';
 interface ChatMessage {
     role: 'user' | 'system';
     content: string; // Markdown or raw text
@@ -25,15 +25,56 @@ export default function RadarChat() {
     // Removed mode state, defaulting to fast mode implicitly via backend default or hardcoded behavior
     const [autoApprove, setAutoApprove] = useState(false);
     const [isRunning, setIsRunning] = useState(false);
+    const [elapsedTime, setElapsedTime] = useState(0);
+    const [executionMode, setExecutionMode] = useState(false);
+    const [isConfigOpen, setIsConfigOpen] = useState(false);
+    const [configState, setConfigState] = useState({ provider: 'deepseek', model: 'deepseek-chat' });
+    
+    useEffect(() => {
+        // Load initial config
+        fetch(`${config.API_BASE_URL}/config/llm`)
+            .then(res => res.json())
+            .then(data => setConfigState(data))
+            .catch(() => {});
+    }, []);
+
+    const saveConfig = async () => {
+        try {
+           const res = await fetch(`${config.API_BASE_URL}/config/llm`, {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify(configState)
+           });
+           if (res.ok) {
+               alert("System Configuration Updated");
+               setIsConfigOpen(false);
+           }
+        } catch (e) {
+            alert("Failed to save configuration");
+        }
+    };
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const stopRef = useRef(false);
+
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
     useEffect(scrollToBottom, [messages]);
+
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (analysisMode || executionMode) {
+            const startTime = Date.now();
+            setElapsedTime(0);
+            interval = setInterval(() => {
+                setElapsedTime((Date.now() - startTime) / 1000);
+            }, 100);
+        }
+        return () => clearInterval(interval);
+    }, [analysisMode, executionMode]);
 
     const handleSend = async (manualMessage?: string, isHidden: boolean = false) => {
         const msgContent = manualMessage || input;
@@ -54,9 +95,11 @@ export default function RadarChat() {
         setIsRunning(true);
         stopRef.current = false;
 
+        const startTime = Date.now();
+
         try {
             // Simplified: No model param needed, backend defaults to fast model
-            const res = await fetch('http://localhost:8000/chat', {
+            const res = await fetch(`${config.API_BASE_URL}/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message: msgContent }) // Request body simplified
@@ -77,6 +120,8 @@ export default function RadarChat() {
             } catch {
                 parsed = { type: 'response', content: data.response };
             }
+            
+            const duration = ((Date.now() - startTime) / 1000).toFixed(2);
 
             if (parsed.type === 'command_proposal') {
                 const newMsg: ChatMessage = {
@@ -86,7 +131,7 @@ export default function RadarChat() {
                     proposalData: {
                         type: 'command',
                         command: parsed.command,
-                        reason: parsed.reason
+                        reason: parsed.reason + ` [Time: ${duration}s]`
                     }
                 };
                 setMessages(prev => [...prev, newMsg]);
@@ -104,7 +149,7 @@ export default function RadarChat() {
                         type: 'server_action',
                         action: parsed.action,
                         data: parsed.data,
-                        reason: parsed.reason
+                        reason: parsed.reason + ` [Time: ${duration}s]`
                     }
                 };
                 setMessages(prev => [...prev, newMsg]);
@@ -114,7 +159,7 @@ export default function RadarChat() {
                 }
 
             } else {
-                setMessages(prev => [...prev, { role: 'system', content: parsed.content }]);
+                setMessages(prev => [...prev, { role: 'system', content: parsed.content + `\n\n[Process Time: ${duration}s]` }]);
             }
         } catch (e) {
             setMessages(prev => [...prev, { role: 'system', content: 'Connection Error: Zero System Offline' }]);
@@ -130,6 +175,8 @@ export default function RadarChat() {
         const { type, command, action, data } = proposal;
         let logMsg = isAuto ? "AUTO-EXECUTING: " : "EXECUTION CONFIRMED: ";
 
+        setExecutionMode(true);
+
         if (type === 'command') {
             logMsg += command;
         } else {
@@ -142,7 +189,7 @@ export default function RadarChat() {
             let result: any;
 
             if (type === 'command') {
-                const res = await fetch('http://localhost:8000/execute-command', {
+                const res = await fetch(`${config.API_BASE_URL}/execute-command`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ command })
@@ -186,10 +233,16 @@ export default function RadarChat() {
                     body = {};
                 }
 
+                if (action === 'ping_hosts') {
+                    endpoint = '/hosts/ping-all';
+                    method = 'POST';
+                    body = {};
+                }
+
                 // Fix endpoint if run-task
                 if (action === 'run_task') endpoint = '/run-task';
 
-                const res = await fetch(`http://localhost:8000${endpoint}`, {
+                const res = await fetch(`${config.API_BASE_URL}${endpoint}`, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
@@ -217,6 +270,7 @@ export default function RadarChat() {
                 await handleSend(`Action failed: ${e.message}. Fix it.`, true);
             }
         } finally {
+            setExecutionMode(false);
             setAnalysisMode(false);
             setIsRunning(false);
         }
@@ -239,11 +293,18 @@ export default function RadarChat() {
         }
     };
 
-    const handleStop = () => {
+    const handleStop = async () => {
         stopRef.current = true;
         setIsRunning(false);
         setAnalysisMode(false);
-        setMessages(prev => [...prev, { role: 'system', content: '*** EMERGENCY STOP TRIGGERED ***' }]);
+        setExecutionMode(false);
+        
+        try {
+            await fetch(`${config.API_BASE_URL}/kill-all-processes`, { method: 'POST' });
+            setMessages(prev => [...prev, { role: 'system', content: '*** EMERGENCY STOP TRIGGERED - PROCESSES TERMINATED ***' }]);
+        } catch (e) {
+            setMessages(prev => [...prev, { role: 'system', content: '*** EMERGENCY STOP FAILED TO REACH SERVER ***' }]);
+        }
     };
 
     return (
@@ -252,6 +313,7 @@ export default function RadarChat() {
             <div className="flex items-center justify-between px-6 py-3 border-b border-green-500/50 bg-green-900/10 h-16 shrink-0">
                 <div className="text-green-500 font-bold tracking-wider flex items-center gap-4 text-lg">
                     PILOT INTERFACE
+                    {(analysisMode || executionMode) && <span className={`font-mono text-sm border px-2 py-0.5 rounded ${executionMode ? 'text-yellow-400 border-yellow-500/30 bg-yellow-900/20' : 'text-green-400 border-green-500/30 bg-green-900/20'}`}>{executionMode ? 'EXECUTING' : 'PROCESSING'}... T+{elapsedTime.toFixed(1)}s</span>}
                     {isRunning && (
                         <button
                             onClick={handleStop}
@@ -263,6 +325,14 @@ export default function RadarChat() {
                 </div>
 
                 <div className="flex items-center gap-4">
+                    {/* Config Toggle */}
+                    <button
+                        onClick={() => setIsConfigOpen(true)}
+                        className="px-3 py-1 border border-green-500 text-green-500 text-sm font-bold transition-all bg-transparent hover:bg-green-500 hover:text-black ml-2"
+                    >
+                        CONFIG
+                    </button>
+                    
                     {/* Auto Approve Toggle */}
                     <button
                         onClick={() => setAutoApprove(!autoApprove)}
@@ -286,6 +356,50 @@ export default function RadarChat() {
                     </button>
                 </div>
             </div>
+
+            {/* Config Modal */}
+            {isConfigOpen && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-10">
+                    <div className="w-full max-w-md border-2 border-green-500 bg-black p-6 shadow-[0_0_50px_rgba(34,197,94,0.3)]">
+                         <div className="flex justify-between items-center mb-6 border-b border-green-500 pb-2">
+                            <h2 className="text-xl font-bold text-green-400">SYSTEM CONFIGURATION</h2>
+                            <button onClick={() => setIsConfigOpen(false)} className="text-green-600 hover:text-green-300">X</button>
+                        </div>
+                        
+                        <div className="space-y-4 mb-6">
+                            <div>
+                                <label className="block text-xs font-bold mb-2 text-green-500">LLM PROVIDER</label>
+                                <select 
+                                    className="w-full bg-green-900/10 border border-green-500 p-2 text-green-300 focus:outline-none"
+                                    value={configState.provider}
+                                    onChange={e => setConfigState({...configState, provider: e.target.value})}
+                                >
+                                    <option value="deepseek">DEEPSEEK V3 (Cloud)</option>
+                                    <option value="ollama">OLLAMA (Local)</option>
+                                </select>
+                            </div>
+                            
+                            {configState.provider === 'ollama' && (
+                                <div>
+                                    <label className="block text-xs font-bold mb-2 text-green-500">OLLAMA MODEL</label>
+                                    <input 
+                                        className="w-full bg-green-900/10 border border-green-500 p-2 text-green-300 focus:outline-none"
+                                        value={configState.model}
+                                        onChange={e => setConfigState({...configState, model: e.target.value})}
+                                        placeholder="mistral"
+                                    />
+                                    <div className="text-[10px] text-green-500/50 mt-1">Make sure you have pulled this model: `ollama pull {configState.model || 'mistral'}`</div>
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className="flex justify-end gap-2">
+                             <button onClick={() => setIsConfigOpen(false)} className="text-green-600 px-4 py-2 text-xs font-bold hover:text-green-400">CANCEL</button>
+                             <button onClick={saveConfig} className="bg-green-600 text-black px-6 py-2 text-xs font-bold hover:bg-green-500">SAVE & RELOAD</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Chat Area */}
             <div className="flex-1 overflow-y-auto space-y-4 custom-scrollbar text-sm px-6 py-4 min-h-0 bg-scanline bg-opacity-5">
@@ -354,7 +468,8 @@ export default function RadarChat() {
                         disabled={analysisMode && !autoApprove}
                         autoFocus
                     />
-                    {analysisMode && <span className="text-green-500 text-xs tracking-widest animate-blink">PROCESSING</span>}
+                    {analysisMode && <span className="text-green-500 font-mono text-sm tracking-widest ml-4">PROCESSING... {elapsedTime.toFixed(1)}s</span>}
+                    {executionMode && <span className="text-yellow-500 font-mono text-sm tracking-widest ml-4 animate-pulse">EXECUTING... {elapsedTime.toFixed(1)}s</span>}
                 </div>
             </div>
 

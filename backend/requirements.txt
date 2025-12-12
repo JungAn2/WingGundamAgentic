@@ -7,3 +7,4 @@ python-dotenv
 chromadb
 pydantic
 pydantic-settings
+python-multipart

@@ -44,5 +44,20 @@ class Issue(Base):
     status = Column(String, default="OPEN") # OPEN, RESOLVED
     timestamp = Column(DateTime, default=datetime.utcnow)
 
+class Host(Base):
+    __tablename__ = "hosts"
+    id = Column(Integer, primary_key=True, index=True)
+    hostname = Column(String, unique=True, index=True)
+    ip_address = Column(String, nullable=True)
+    status = Column(String, default="UNKNOWN") # ONLINE, OFFLINE, UNKNOWN
+    last_seen = Column(DateTime, default=datetime.utcnow)
+    description = Column(Text, nullable=True)
+
+class SystemSetting(Base):
+    __tablename__ = "system_settings"
+    key = Column(String, primary_key=True, index=True)
+    value = Column(String)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
 def init_db():
     Base.metadata.create_all(bind=engine)

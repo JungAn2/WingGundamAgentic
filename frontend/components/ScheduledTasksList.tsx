@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import config from '../config';
 
 interface ScheduledTask {
     id: number;
@@ -37,7 +38,7 @@ export default function ScheduledTasksList() {
 
     const fetchTasks = async () => {
         try {
-            const res = await fetch('http://localhost:8000/scheduled-tasks');
+            const res = await fetch(`${config.API_BASE_URL}/scheduled-tasks`);
             if (res.ok) {
                 const data = await res.json();
                 setTasks(data);
@@ -70,7 +71,7 @@ export default function ScheduledTasksList() {
     const handleValidate = async () => {
         setLoading(true);
         try {
-            const res = await fetch('http://localhost:8000/validate-task', {
+            const res = await fetch(`${config.API_BASE_URL}/validate-task`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
@@ -92,8 +93,8 @@ export default function ScheduledTasksList() {
     const handleSave = async () => {
         setLoading(true);
         const url = editingTask
-            ? `http://localhost:8000/scheduled-tasks/${editingTask.id}`
-            : 'http://localhost:8000/scheduled-tasks';
+            ? `${config.API_BASE_URL}/scheduled-tasks/${editingTask.id}`
+            : `${config.API_BASE_URL}/scheduled-tasks`;
         const method = editingTask ? 'PUT' : 'POST';
 
         try {
@@ -119,7 +120,7 @@ export default function ScheduledTasksList() {
         if (!editingTask || !confirm("Are you sure you want to delete this task?")) return;
         setLoading(true);
         try {
-            const res = await fetch(`http://localhost:8000/scheduled-tasks/${editingTask.id}`, {
+            const res = await fetch(`${config.API_BASE_URL}/scheduled-tasks/${editingTask.id}`, {
                 method: 'DELETE'
             });
             if (res.ok) {

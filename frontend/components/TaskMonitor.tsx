@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect } from 'react';
-
+import config from '../config';
 interface Log {
     id: number;
     timestamp: string;
@@ -22,7 +22,7 @@ export default function TaskMonitor() {
 
     const fetchLogs = async () => {
         try {
-            const res = await fetch('http://localhost:8000/logs');
+            const res = await fetch(`${config.API_BASE_URL}/logs`);
             if (res.ok) {
                 const data = await res.json();
                 setLogs(data);

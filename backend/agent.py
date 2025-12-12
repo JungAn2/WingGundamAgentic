@@ -1,18 +1,68 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from openai import OpenAI
 import os
 from rag import rag_system
-from dotenv import load_dotenv
-
-load_dotenv()
 
 class WingAgent:
     def __init__(self):
-        self.client = OpenAI(
-            api_key=os.getenv("DEEPSEEK_API_KEY"),
-            base_url="https://api.deepseek.com/v1"
-        )
-        self.model = "deepseek-chat"
         self.history = []
+        self.load_config()
+
+    def load_config(self):
+        # Load from DB or default
+        try:
+            from database import SessionLocal, SystemSetting
+            db = SessionLocal()
+            provider_setting = db.query(SystemSetting).filter(SystemSetting.key == "llm_provider").first()
+            model_setting = db.query(SystemSetting).filter(SystemSetting.key == "llm_model").first()
+            
+            provider = provider_setting.value if provider_setting else "deepseek"
+            model = model_setting.value if model_setting else "deepseek-chat"
+            db.close()
+        except Exception as e:
+            print(f"Config Load Error: {e}, defaulting to deepseek")
+            provider = "deepseek"
+            model = "deepseek-chat"
+
+        self.provider = provider
+        self.model = model
+        
+        if provider == "ollama":
+            self.client = OpenAI(
+                api_key="ollama", # Dummy key
+                base_url="http://localhost:11434/v1"
+            )
+        else:
+            self.client = OpenAI(
+                api_key=os.getenv("DEEPSEEK_API_KEY"),
+                base_url="https://api.deepseek.com/v1"
+            )
+        
+        print(f"Agent Configured: [{provider.upper()}] Model: {model}")
+
+    def update_config(self, provider, model):
+        # Save to DB
+        from database import SessionLocal, SystemSetting
+        db = SessionLocal()
+        
+        # Helper to upsert
+        def upsert(key, val):
+            setting = db.query(SystemSetting).filter(SystemSetting.key == key).first()
+            if not setting:
+                setting = SystemSetting(key=key, value=val)
+                db.add(setting)
+            else:
+                setting.value = val
+        
+        upsert("llm_provider", provider)
+        upsert("llm_model", model)
+        db.commit()
+        db.close()
+        
+        # Reload
+        self.load_config()
 
     def chat(self, user_input):
         # Retrieve context from RAG
@@ -24,6 +74,23 @@ class WingAgent:
                  context = "\n".join(context_results['documents'][0])
         except Exception as e:
              print(f"RAG Retrieval warning: {e}")
+
+        # Inject Database State (Hosts) - Conditional
+        known_hosts_str = ""
+        host_keywords = ["host", "server", "network", "ip", "machine", "node", "connection", "status", "ping"]
+        if any(keyword in user_input.lower() for keyword in host_keywords):
+            try:
+                from database import SessionLocal, Host
+                db = SessionLocal()
+                hosts = db.query(Host).all()
+                if hosts:
+                    host_list = [f"- {h.hostname} ({h.ip_address}) [Status: {h.status}]" for h in hosts]
+                    known_hosts_str = "\nKNOWN NETWORK HOSTS (Database):\n" + "\n".join(host_list)
+                else:
+                    known_hosts_str = "\nKNOWN NETWORK HOSTS (Database):\nNo hosts configured."
+                db.close()
+            except Exception as e:
+                known_hosts_str = f"\nError retrieving hosts: {str(e)}"
 
         system_prompt = f"""You are the Wing Gundam Zero System (Agentic Mode). 
         You are a highly advanced operating system monitor and assistant.
@@ -48,7 +115,7 @@ class WingAgent:
         Type 3: Server Action (Use for internal system operations)
         {{
             "type": "server_action",
-            "action": "create_schedule" | "remove_schedule" | "run_task" | "resolve_issue",
+            "action": "create_schedule" | "remove_schedule" | "run_task" | "resolve_issue" | "ping_hosts",
             "data": {{
                 // For create_schedule:
                 "name": "Task Name",
@@ -70,6 +137,8 @@ class WingAgent:
 
         Context from knowledge base:
         {context}
+
+        {known_hosts_str}
         """
 
         messages = [
@@ -77,12 +146,43 @@ class WingAgent:
             {"role": "user", "content": user_input}
         ]
 
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            response_format={"type": "json_object"}
-        )
-        content = response.choices[0].message.content
+        # Adjust parameters for small local models that dislike json_object enforcement or strict schemas
+        start_time = datetime.datetime.now()
+        
+        try:
+            # Only use json_object for DeepSeek/OpenAI compatible advanced mode
+            if self.provider == 'ollama':
+                 response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=0.7 
+                    # Local models often fail with response_format={"type": "json_object"}
+                )
+            else:
+                 response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    response_format={"type": "json_object"}
+                )
+            
+            content = response.choices[0].message.content
+            
+            # Sanitization if local model outputs markdown blocks
+            if "```json" in content:
+                import re
+                match = re.search(r'```json\s*(\{.*?\})\s*```', content, re.DOTALL)
+                if match:
+                    content = match.group(1)
+            elif "```" in content:
+                 content = content.replace("```", "").strip()
+                 
+        except Exception as e:
+            # Fallback
+            import json
+            content = json.dumps({
+                "type": "response", 
+                "content": f"System Error communicating with Agent Core: {str(e)}"
+            })
         
         # Short-Term Memory Append (Assistant) - DISABLED to save tokens
         # self.history.append({"role": "assistant", "content": content})

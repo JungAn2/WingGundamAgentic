@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect } from 'react';
-
+import config from '../config';
 interface Issue {
     id: number;
     title: string;
@@ -19,7 +19,7 @@ export default function IssueTracker() {
     }, []);
 
     const fetchIssues = async () => {
-        const res = await fetch('http://localhost:8000/issues');
+        const res = await fetch(`${config.API_BASE_URL}/issues`);
         if (res.ok) {
             const data = await res.json();
             setIssues(data);
@@ -27,7 +27,7 @@ export default function IssueTracker() {
     };
 
     const resolveIssue = async (id: number) => {
-        await fetch(`http://localhost:8000/issues/${id}/resolve`, { method: 'PUT' });
+        await fetch(`${config.API_BASE_URL}/issues/${id}/resolve`, { method: 'PUT' });
         fetchIssues();
     };
 

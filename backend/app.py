@@ -13,7 +13,7 @@ app = FastAPI(title="Wing Gundam Agentic Backend")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://localhost:5000", "http://localhost:5500"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -89,20 +89,67 @@ def resolve_issue(issue_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "resolved"}
 
+# Global process tracker
+import subprocess
+import threading
+import uuid
+import signal
+import os
+
+active_processes = {}
+process_lock = threading.Lock()
+
 @app.post("/execute-command")
 def execute_command(request: CommandRequest):
-    import subprocess
+    # Store process to allow cancellation
+    proc_id = str(uuid.uuid4())
+    
     try:
-        # Security Warning: In a real production system, arbitrary command execution is dangerous.
-        # This is a demo agentic system running with user permission.
-        result = subprocess.run(request.command, shell=True, capture_output=True, text=True)
+        # Popen allows us to keep the process object
+        process = subprocess.Popen(
+            request.command, 
+            shell=True, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE,
+            text=True,
+            start_new_session=True # Key for killing execution groups later
+        )
+        
+        with process_lock:
+            active_processes[proc_id] = process
+
+        # Wait for result
+        stdout, stderr = process.communicate()
+        
         return {
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "returncode": result.returncode
+            "stdout": stdout,
+            "stderr": stderr,
+            "returncode": process.returncode
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        with process_lock:
+            if proc_id in active_processes:
+                del active_processes[proc_id]
+
+@app.post("/kill-all-processes")
+def kill_all_processes():
+    count = 0
+    with process_lock:
+        for pid, process in list(active_processes.items()):
+            try:
+                # Terminate properly
+                process.terminate()
+                # If using start_new_session=True, we can kill the group (Linux/Mac)
+                # os.killpg(os.getpgid(process.pid), signal.SIGTERM) 
+                # But simple terminate() is often enough for simple commands
+                process.kill() 
+                del active_processes[pid]
+                count += 1
+            except Exception as e:
+                print(f"Error killing process {pid}: {e}")
+    return {"status": "success", "killed_count": count}
 
 class ScheduleCreate(BaseModel):
     name: str
@@ -112,6 +159,12 @@ class ScheduleCreate(BaseModel):
     input_command: Optional[str] = None
     follow_up_command: Optional[str] = None
     is_agentic: bool = False
+
+class HostCreate(BaseModel):
+    hostname: str
+    ip_address: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = "UNKNOWN"
 
 class RunTaskRequest(BaseModel):
     name: str
@@ -123,6 +176,25 @@ class TaskValidationRequest(BaseModel):
     prompt: Optional[str] = None
     input_command: Optional[str] = None
     follow_up_command: Optional[str] = None
+
+class ConfigRequest(BaseModel):
+    provider: str # deepseek | ollama
+    model: str # deepseek-chat | mistral | generic
+
+@app.get("/config/llm")
+def get_llm_config():
+    return {
+        "provider": agent.provider,
+        "model": agent.model
+    }
+
+@app.post("/config/llm")
+def set_llm_config(config: ConfigRequest):
+    try:
+        agent.update_config(config.provider, config.model)
+        return {"status": "success", "provider": agent.provider, "model": agent.model}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/validate-task")
 def validate_task(task: TaskValidationRequest):
@@ -275,3 +347,132 @@ def run_task(request: RunTaskRequest, db: Session = Depends(get_db)):
         return {"status": "success", "output": response}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# -- Host Management Endpoints --
+
+@app.get("/hosts")
+def get_hosts(db: Session = Depends(get_db)):
+    from database import Host
+    return db.query(Host).all()
+
+@app.post("/hosts")
+def create_host(host: HostCreate, db: Session = Depends(get_db)):
+    from database import Host
+    try:
+        new_host = Host(
+            hostname=host.hostname,
+            ip_address=host.ip_address,
+            description=host.description,
+            status=host.status
+        )
+        db.add(new_host)
+        db.commit()
+        db.refresh(new_host)
+        return new_host
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/hosts/{host_id}")
+def update_host(host_id: int, host: HostCreate, db: Session = Depends(get_db)):
+    from database import Host
+    db_host = db.query(Host).filter(Host.id == host_id).first()
+    if not db_host:
+        raise HTTPException(status_code=404, detail="Host not found")
+    
+    db_host.hostname = host.hostname
+    db_host.ip_address = host.ip_address
+    db_host.description = host.description
+    db_host.status = host.status
+    
+    db.commit()
+    return db_host
+
+@app.delete("/hosts/{host_id}")
+def delete_host(host_id: int, db: Session = Depends(get_db)):
+    from database import Host
+    db_host = db.query(Host).filter(Host.id == host_id).first()
+    if not db_host:
+        raise HTTPException(status_code=404, detail="Host not found")
+    
+    db.delete(db_host)
+    db.commit()
+    return {"status": "success"}
+
+@app.post("/hosts/upload")
+def upload_hosts(file: dict, db: Session = Depends(get_db)):
+    # Note: In a real FastAPI app, use UploadFile. Simple JSON for now or text parsing manually.
+    # The user asked for "upload a host file". Let's assume sending text content for simplicity,
+    # or I will modify this to accept a FileUpload if I can.
+    # But `BaseModel` approach is clearer for now given the agent status.
+    # Let's try standard file upload signature.
+    pass 
+
+from fastapi import UploadFile, File
+
+@app.post("/hosts/upload-file")
+async def upload_hosts_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    from database import Host
+    content = await file.read()
+    text = content.decode("utf-8")
+    
+    added_count = 0
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        
+        # Simple hosts parsing: IP HOSTNAME [ALIASES]
+        parts = line.split()
+        if len(parts) >= 2:
+            ip = parts[0]
+            hostname = parts[1]
+            
+            # Check if exists
+            exists = db.query(Host).filter(Host.hostname == hostname).first()
+            if not exists:
+                new_host = Host(hostname=hostname, ip_address=ip, status="UNKNOWN")
+                db.add(new_host)
+                added_count += 1
+    
+    db.commit()
+    db.commit()
+    return {"status": "success", "added": added_count}
+
+@app.post("/hosts/ping-all")
+def ping_all_hosts(db: Session = Depends(get_db)):
+    from database import Host
+    import subprocess
+    import platform
+    
+    hosts = db.query(Host).all()
+    results = []
+    
+    # Determine ping command flag for timeout
+    # Linux/Mac uses -W (seconds), Windows uses -w (milliseconds)
+    param = '-n' if platform.system().lower()=='windows' else '-c'
+    timeout_param = '-w' if platform.system().lower()=='windows' else '-W'
+    timeout_val = '1000' if platform.system().lower()=='windows' else '1'
+    
+    for host in hosts:
+        if not host.ip_address:
+            continue
+            
+        command = ['ping', param, '1', timeout_param, timeout_val, host.ip_address]
+        
+        try:
+            # We don't want to use the global tracker for this internal utility
+            # Just run it quickly
+            code = subprocess.call(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            new_status = "ONLINE" if code == 0 else "OFFLINE"
+        except:
+            new_status = "OFFLINE"
+            
+        if host.status != new_status:
+            host.status = new_status
+            host.last_seen = datetime.utcnow()
+            
+        results.append({"hostname": host.hostname, "ip": host.ip_address, "status": new_status})
+    
+    db.commit()
+    return {"status": "success", "results": results}
