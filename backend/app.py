@@ -8,12 +8,16 @@ from scheduler import start_scheduler
 from sqlalchemy.orm import Session
 import json
 import traceback
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(title="Wing Gundam Agentic Backend")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5000", "http://localhost:5500", "http://127.0.0.1:5500"],
+    allow_origins=os.environ.get("ALLOWED_ORIGINS", "").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
